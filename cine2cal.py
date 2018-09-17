@@ -7,8 +7,7 @@
 # WHAT
 #
 #  Parse Cinemateket page of upcoming movies and insert them into a Google
-#  calendar.
-#  Uses cinemateket and dcal modules
+#  calendar. Uses cinemateket and dcal modules.
 #
 # TODO
 #

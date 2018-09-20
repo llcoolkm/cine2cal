@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #------------------------------------------------------------------------------
 #
 # WHO
@@ -23,19 +24,6 @@ from cinemateket import Cinemateket
 from dcal import CineCal
 
 # }}}
-# Parse arguments {{{
-parser = argparse.ArgumentParser(description='cine2cal')
-parser.add_argument('--delete', '-d', type=int, default=7,
-	help='How many days into the past to delete old events')
-parser.add_argument('--limit', '-l', type=int, default=0,
-	help='Limit how many movies to process')
-parser.add_argument('--notification', '-n', action='store_true',
-	help='Enable notifications for calendar events')
-parser.add_argument('--verbose', '-v', action='store_true', help='Verbose')
-args = parser.parse_args()
-
-
-# }}}
 # def main(args) {{{
 #------------------------------------------------------------------------------
 def main(args):
@@ -43,7 +31,7 @@ def main(args):
 	# Get movies from cinemateket
 	cinemateket = Cinemateket(args.limit)
 
-	print('Imported %s movies' % (str(cinemateket.count())))
+	print('Scraped %s movies' % (str(cinemateket.count())))
 	print(79 * '-')
 	cinemateket.print()
 
@@ -57,16 +45,26 @@ def main(args):
 	num_events = 0
 	for movie in cinemateket.list():
 		event = cinecal.get(movie['start'])
+#		print(event)
 		if event is None:
 			cinecal.insert(movie)
 			num_events = num_events + 1
 
 	print('Inserted %i events' % (num_events))
 
-
-if __name__ == '__main__':
-	main(args)
-
+	return
 
 # }}}
+# __main__ {{{
+if __name__ == '__main__':
+	# Parse arguments
+	parser = argparse.ArgumentParser(description='cine2cal')
+	parser.add_argument('--delete', '-d', type=int, default=7, help='How many days into the past to delete old events')
+	parser.add_argument('--limit', '-l', type=int, default=2, help='Limit how many movies to process')
+	parser.add_argument('--notification', '-n', action='store_true', help='Enable notifications for calendar events')
+	parser.add_argument('--verbose', '-v', action='store_true', help='Verbose')
+	parser.add_argument('--noauth_local_webserver', action='store_true', help='No local browser')
+	args = parser.parse_args()
+	main(args)
 
+# }}}

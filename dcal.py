@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #------------------------------------------------------------------------------
 #
 # WHO
@@ -14,21 +15,13 @@
 #
 #------------------------------------------------------------------------------
 # imports {{{
+from __future__ import print_function
 import os
-#from datetime import datetime, timedelta
 import datetime
-import httplib2
 import oauth2client
+from httplib2 import Http
 from apiclient import discovery
-from oauth2client import client
-from oauth2client import tools
-# }}}
-#try:
-#	import argparse
-#	flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-#except ImportError:
-#	flags = None
-
+from oauth2client import file, client, tools
 
 # }}}
 # class CineCal() {{{
@@ -71,12 +64,10 @@ class CineCal():
 		credentials = store.get()
 
 		if not credentials or credentials.invalid:
+			flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
 			flow = client.flow_from_clientsecrets(self.apikeyfile, self.scopes)
 			flow.user_agent = self.name
-			if flags:
-				credentials = tools.run_flow(flow, store, flags)
-			else: # Needed only for compatibility with Python 2.6
-				credentials = tools.run(flow, store)
+			credentials = tools.run_flow(flow, store, flags)
 			print('Storing credentials to %s' % credential_path)
 
 		return credentials
@@ -88,7 +79,7 @@ class CineCal():
 	def __connect_calendar(self):
 
 		credentials = self.__get_credentials()
-		http = credentials.authorize(httplib2.Http())
+		http = credentials.authorize(Http())
 		self.service = discovery.build('calendar', 'v3', http=http)
 
 		return None
@@ -104,8 +95,11 @@ class CineCal():
 
 		"""
 
-		time_min = time_event - datetime.timedelta(minutes=1)
-		time_max = time_event + datetime.timedelta(minutes=1)
+		time_min = time_event - datetime.timedelta(minutes=5)
+		time_max = time_event + datetime.timedelta(minutes=5)
+
+		print(time_min)
+		print(time_max)
 
 		eventsResult = self.service.events().list(
 				calendarId='primary',
@@ -113,11 +107,15 @@ class CineCal():
 				timeMax=time_max.isoformat() + 'Z'
 			).execute()
 
+		myevent = None
 		for event in eventsResult.get('items', []):
+			# Break and return if this event is ours
+			print("Found event in calendar: %s\n" % event['summary'])
 			if event['description'].split(':')[0] == self.tag:
-				return event
-			else:
-				return None
+				myevent=event
+				break
+
+		return myevent
 
 
 # }}}
@@ -174,7 +172,7 @@ class CineCal():
 
 		return None
 
-
+# }}}
 # def delete_days(self, days=-1) {{{
 #------------------------------------------------------------------------------
 	def delete_days(self, days=-1):
@@ -232,10 +230,8 @@ class CineCal():
 		event = self.service.events().insert(
 			calendarId='primary', sendNotifications=False, body=event
 			).execute()
-#		print('Event created: %s' % (event.get('htmlLink')))
+		print('Event created: %s' % (event.get('htmlLink')))
 
 		return None
 
-
 # }}}
-

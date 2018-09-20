@@ -45,8 +45,7 @@ class Cinemateket():
 
 		# Cinemateket
 		self.site = 'http://www.filminstitutet.se'
-#		self.index = '/sv/se-och-samtala-om-film/cinemateket-stockholm/program'
-		self.index = '/sv/se-och-samtala-om-film/cinemateket-stockholm/program/?eventtype=&listtype=&page=2'
+		self.index = '/sv/se-och-samtala-om-film/cinemateket-stockholm/program/?eventtype=&listtype=&page=9'
 		self.movies = []
 
 		self.__import_movies(num_movies)
@@ -80,16 +79,17 @@ class Cinemateket():
 		"""
 
 		div = self.__get_html_page(link).find('div', 'article__editorial-content')
-		div = str(div.find_all('p')[1])
+		div = str(div.find_all('p')[2])
 
 		movie = {}
 		for line in div.split("\r\n"):
+
 			try:
 				line.rstrip('<br>').strip().replace(u'\xa0', ' ')
 				key   = line.split(':')[0].lower()
 				value = line.split(':')[1].rstrip('<br>').strip()
 				movie[key] = value.replace(u'\u2013', '-')
-#				movie.update([line.split(':')])
+
 			except (IndexError, ValueError):
 				continue
 
@@ -105,6 +105,7 @@ class Cinemateket():
 #		movie['längd']  = [int(i) for i in re.findall('\d+', movie['längd'])]
 
 		times = {}
+		
 		for time in re.findall('(\d+) (\w+)', movie['längd']):
 			times[str(time[1])] = int(time[0])
 
@@ -122,8 +123,6 @@ class Cinemateket():
 				movie['längd'][unit] = times[unit]
 			except KeyError:
 				movie['längd'][unit] = 0
-
-#		print(movie['längd'])
 
 		movie['slut'] = date + datetime.timedelta(hours=movie['längd']['tim'],
 			minutes=movie['längd']['min'])
@@ -153,8 +152,9 @@ class Cinemateket():
 				continue
 
 			link = article.a['href']
+			year = (datetime.datetime.now()).year
 			date = datetime.datetime.strptime(article.span.string[4:] +
-				' 2016', '%d/%m kl. %H:%M %Y')
+				' ' + str(year), '%d/%m kl. %H:%M %Y')
 			theater = article.find_all('span')[1].string
 
 			# Get the details from the specific movie page

@@ -41,11 +41,11 @@ class Cinemateket():
 # }}}
 # def __init__(self) {{{
 #------------------------------------------------------------------------------
-	def __init__(self, num_movies=0):
+	def __init__(self, num_movies = 0):
 
 		# Cinemateket
 		self.site = 'http://www.filminstitutet.se'
-		self.index = '/sv/se-och-samtala-om-film/cinemateket-stockholm/program/?eventtype=&listtype=&page=9'
+		self.index = '/sv/se-och-samtala-om-film/cinemateket-stockholm/program/?eventtype=&listtype=&page=20'
 		self.movies = []
 
 		self.__import_movies(num_movies)
@@ -98,12 +98,13 @@ class Cinemateket():
 		movie['länk'] = self.site + link
 		movie['start'] = date
 		movie['teater'] = theater
+		movie['längd'] = {}
 #		movie['år']     = ''.join(filter(lambda x: x.isdigit(), movie['år']))
 
+		# Compute datetime for movie end
 		# The below two variants doesn't work for movies under 1 hour
 #		movie['längd']  = list(map(int, re.findall('\d+', movie['längd'])))
 #		movie['längd']  = [int(i) for i in re.findall('\d+', movie['längd'])]
-
 		times = {}
 		
 		for time in re.findall('(\d+) (\w+)', movie['längd']):
@@ -116,15 +117,14 @@ class Cinemateket():
 
 		# http://stackoverflow.com/questions/20145902/how-to-extract-dictionary-single-key-value-pair-in-variables
 
-		movie['längd'] = {}
-
 		for unit in ('tim', 'min'):
 			try:
 				movie['längd'][unit] = times[unit]
 			except KeyError:
 				movie['längd'][unit] = 0
 
-		movie['slut'] = date + datetime.timedelta(hours=movie['längd']['tim'],
+		movie['slut'] = movie['start'] + 
+			datetime.timedelta(hours=movie['längd']['tim'],
 			minutes=movie['längd']['min'])
 
 		return movie
@@ -173,27 +173,21 @@ class Cinemateket():
 #
 #------------------------------------------------------------------------------
 	def count(self):
-
 		return len(self.movies)
-
 
 # }}}
 # def list(self) {{{
 #
 #------------------------------------------------------------------------------
 	def list(self):
-
 		return self.movies
-
 
 # }}}
 # def pop(self) {{{
 #
 #------------------------------------------------------------------------------
 	def pop(self):
-
 		return self.movies.pop()
-
 
 # }}}
 # def print(self) {{{
@@ -208,12 +202,10 @@ class Cinemateket():
 				movie['slut'].strftime('%H:%M') +
 				"\t" +
 #				movie['namn'].replace(u'\u2013', '-') +
-				str(str(movie['namn']).encode('cp850', errors='replace')) +
+				movie['namn'] + 
 				"\t" +
 				movie['år'].replace(u'\u2013', '-')
 			)
-
 		return
-
 
 # }}}

@@ -95,11 +95,8 @@ class CineCal():
 
 		"""
 
-		time_min = time_event - datetime.timedelta(minutes=5)
-		time_max = time_event + datetime.timedelta(minutes=5)
-
-		print(time_min)
-		print(time_max)
+		time_min = time_event - datetime.timedelta(minutes=2)
+		time_max = time_event + datetime.timedelta(minutes=2)
 
 		eventsResult = self.service.events().list(
 				calendarId='primary',
@@ -110,7 +107,10 @@ class CineCal():
 		myevent = None
 		for event in eventsResult.get('items', []):
 			# Break and return if this event is ours
-			print("Found event in calendar: %s\n" % event['summary'])
+			event['start']['dateTime'] = datetime.strptime(
+				event['start']['dateTime'], "%Y-%m-%dT%H:%M")
+			print("Found event in calendar: %s" % event['start']['dateTime'],
+				event['summary'])
 			if event['description'].split(':')[0] == self.tag:
 				myevent=event
 				break
@@ -128,11 +128,11 @@ class CineCal():
 		if days == 0:
 			return
 		elif days < 0:
-		# Blast from the past!
+			# Blast from the past!
 			time_max = datetime.datetime.utcnow()
 			time_min = time_max - datetime.timedelta(days=abs(days))
 		else:
-		# Into the future!
+			# Return to the future!
 			time_min = datetime.datetime.utcnow()
 			time_max = time_min + datetime.timedelta(days=days)
 

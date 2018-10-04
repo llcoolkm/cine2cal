@@ -88,32 +88,44 @@ class CineCal():
 # }}}
 # def get_event() {{{
 #------------------------------------------------------------------------------
-	def get(self, time_event):
+	def get(self, time_event, movie_name):
 		"""Get a single event from the calendar
-		Look for an event that starts at the same time and has the correct
-		tag.
+		Look for an event that starts at the same date, has the
+		correct tag and the same name.
 
 		"""
 
-		time_min = time_event - datetime.timedelta(minutes=2)
-		time_max = time_event + datetime.timedelta(minutes=2)
+		myevent = None
 
+		# Set time to match the entire day
+		time_min = time_event.replace(hour = 0, minute = 0, second = 0)
+		time_max = time_event.replace(hour = 23, minute = 59, second = 59)
+
+		# Retrieve all events
 		eventsResult = self.service.events().list(
-				calendarId='primary',
-				timeMin=time_min.isoformat() + 'Z',
-				timeMax=time_max.isoformat() + 'Z'
+				calendarId = 'primary',
+				timeMin = time_min.isoformat() + 'Z',
+				timeMax = time_max.isoformat() + 'Z'
 			).execute()
 
-		myevent = None
+
+		# Loop over retrieved events
 		for event in eventsResult.get('items', []):
-			# Break and return if this event is ours
-			event['start']['dateTime'] = datetime.strptime(
-				event['start']['dateTime'], "%Y-%m-%dT%H:%M")
-			print("Found event in calendar: %s" % event['start']['dateTime'],
-				event['summary'])
+
+			# Cast calendar time to datetime object
+			event['start']['dateTime'] = datetime.datetime.strptime(
+				event['start']['dateTime'],
+				"%Y-%m-%dT%H:%M:00+02:00")
+
+			print("Found event in calendar: %s"
+				% event['start']['dateTime'], event['summary'])
+
+			# Set myevent, Break (and return) if this event has
+			# correct tag and the same name
 			if event['description'].split(':')[0] == self.tag:
-				myevent=event
-				break
+				if event['summary'] == movie_name:
+					myevent=event
+					break
 
 		return myevent
 

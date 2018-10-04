@@ -60,10 +60,9 @@ if __name__ == '__main__':
 	# Parse arguments
 	parser = argparse.ArgumentParser(description='cine2cal')
 	parser.add_argument('--delete', '-d', type=int, default=7, help='How many days into the past to delete old events')
-	parser.add_argument('--limit', '-l', type=int, default=2, help='Limit how many movies to process')
-	parser.add_argument('--notification', '-n', action='store_true', help='Enable notifications for calendar events')
+	parser.add_argument('--number', '-n', type=int, default=2, help='Number of movies to add')
+	parser.add_argument('--notifications', '-N', action='store_true', help='Enable notifications for calendar events')
 	parser.add_argument('--verbose', '-v', action='store_true', help='Verbose')
-	parser.add_argument('--noauth_local_webserver', action='store_true', help='No local browser')
 	args = parser.parse_args()
 	main(args)
 

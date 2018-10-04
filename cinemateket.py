@@ -81,7 +81,12 @@ class Cinemateket():
 		div = self.__get_html_page(link).find('div', 'article__editorial-content')
 		div = str(div.find_all('p')[2])
 
+		# Create a dictionary and prepopulate som values that are not
+		# always there
 		movie = {}
+		movie['år'] = '-'
+		movie['format'] = '-'
+
 		for line in div.split("\r\n"):
 
 			try:

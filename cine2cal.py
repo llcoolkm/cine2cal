@@ -29,7 +29,7 @@ from dcal import CineCal
 def main(args):
 
 	# Get movies from cinemateket
-	cinemateket = Cinemateket(args.limit)
+	cinemateket = Cinemateket(args.number)
 
 	print('Scraped %s movies' % (str(cinemateket.count())))
 	print(79 * '-')
@@ -44,8 +44,9 @@ def main(args):
 	# Insert new events
 	num_events = 0
 	for movie in cinemateket.list():
-		event = cinecal.get(movie['start'])
-#		print(event)
+
+		event = cinecal.get(movie['start'], movie['namn'])
+
 		if event is None:
 			cinecal.insert(movie)
 			num_events = num_events + 1

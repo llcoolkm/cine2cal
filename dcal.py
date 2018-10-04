@@ -64,10 +64,17 @@ class CineCal():
 		credentials = store.get()
 
 		if not credentials or credentials.invalid:
-			flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-			flow = client.flow_from_clientsecrets(self.apikeyfile, self.scopes)
-			flow.user_agent = self.name
-			credentials = tools.run_flow(flow, store, flags)
+			flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
+			flow.user_agent = APPLICATION_NAME
+			if flags:
+				credentials = tools.run_flow(flow, store, flags)
+			else: # Needed only for compatibility with Python 2.6
+				credentials = tools.run(flow, store)
+
+#			flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+#			flow = client.flow_from_clientsecrets(self.apikeyfile, self.scopes)
+#			flow.user_agent = self.name
+#			credentials = tools.run_flow(flow, store, flags)
 			print('Storing credentials to %s' % credential_path)
 
 		return credentials
@@ -102,15 +109,15 @@ class CineCal():
 		time_max = time_event.replace(hour = 23, minute = 59, second = 59)
 
 		# Retrieve all events
-		eventsResult = self.service.events().list(
-				calendarId = 'primary',
-				timeMin = time_min.isoformat() + 'Z',
-				timeMax = time_max.isoformat() + 'Z'
-			).execute()
-
+		events = self.service.events().list(
+			calendarId = 'primary',
+			timeMin = time_min.isoformat() + 'Z',
+			timeMax = time_max.isoformat() + 'Z',
+			singleEvents = True,
+			orderBy = 'startTime').execute()
 
 		# Loop over retrieved events
-		for event in eventsResult.get('items', []):
+		for event in events.get('items', []):
 
 			# Cast calendar time to datetime object
 			event['start']['dateTime'] = datetime.datetime.strptime(
@@ -187,7 +194,7 @@ class CineCal():
 # }}}
 # def delete_days(self, days=-1) {{{
 #------------------------------------------------------------------------------
-	def delete_days(self, days=-1):
+	def delete_days(self, days = -1):
 		"""Delete events from the current day, use negative days for past
 		events.
 
@@ -217,8 +224,10 @@ class CineCal():
 		event = {
 			'summary': movie['namn'],
 			'location': movie['teater'],
-			'description': "%s:\n%s\n%s\n%s\n" %
-			    (self.tag, movie['år'], movie['format'], movie['länk']),
+			'description': "%s:\n%s\n%s\n%s\n"
+				% (self.tag, movie['år'],
+				movie['format'],
+				movie['länk']),
 			'start': {
 				'dateTime': movie['start'].strftime('%Y-%m-%dT%H:%M:00'),
 				'timeZone': self.timezone
@@ -233,15 +242,16 @@ class CineCal():
 			'reminders': {
 				'useDefault': False,
 				'overrides': [
-		      			{'method': 'email', 'minutes': 24 * 60},
-		      			{'method': 'popup', 'minutes': 60},
+					{'method': 'email', 'minutes': 24 * 60},
+					{'method': 'popup', 'minutes': 60},
 				],
 			},
 		}
 
 		event = self.service.events().insert(
-			calendarId='primary', sendNotifications=False, body=event
-			).execute()
+			calendarId = 'primary',
+			sendNotifications = False,
+			body = event).execute()
 		print('Event created: %s' % (event.get('htmlLink')))
 
 		return None

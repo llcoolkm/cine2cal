@@ -103,6 +103,8 @@ class Cinemateket():
 		movie['länk'] = self.site + link
 		movie['start'] = date
 		movie['teater'] = theater
+		# Fix for Windows where a final <br/ is included with the year (!?)
+		movie['år'] = (movie['år'].split('<'))[0]
 
 		# Compute datetime for movie end
 		times = {}
@@ -203,7 +205,6 @@ class Cinemateket():
 				"-" +
 				movie['slut'].strftime('%H:%M') +
 				"\t" +
-#				movie['namn'].replace(u'\u2013', '-') +
 				movie['namn'] + 
 				"\t" +
 				movie['år'].replace(u'\u2013', '-')

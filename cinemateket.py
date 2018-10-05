@@ -81,7 +81,12 @@ class Cinemateket():
 		div = self.__get_html_page(link).find('div', 'article__editorial-content')
 		div = str(div.find_all('p')[2])
 
+		# Create a dictionary and prepopulate som values that are not
+		# always there
 		movie = {}
+		movie['år'] = '-'
+		movie['format'] = '-'
+
 		for line in div.split("\r\n"):
 
 			try:
@@ -98,37 +103,34 @@ class Cinemateket():
 		movie['länk'] = self.site + link
 		movie['start'] = date
 		movie['teater'] = theater
-		movie['längd'] = {}
-#		movie['år']     = ''.join(filter(lambda x: x.isdigit(), movie['år']))
 
 		# Compute datetime for movie end
-		# The below two variants doesn't work for movies under 1 hour
-#		movie['längd']  = list(map(int, re.findall('\d+', movie['längd'])))
-#		movie['längd']  = [int(i) for i in re.findall('\d+', movie['längd'])]
 		times = {}
 		
+		# Extract hour and minutes from 'längd'
 		for time in re.findall('(\d+) (\w+)', movie['längd']):
 			times[str(time[1])] = int(time[0])
-
 		try:
 			times['tim'] = times['hr']
 		except KeyError:
 			pass
+		# Change movie['längd'] to a dictionary so we can add to it below
+		movie['längd'] = {}
 
 		# http://stackoverflow.com/questions/20145902/how-to-extract-dictionary-single-key-value-pair-in-variables
-
 		for unit in ('tim', 'min'):
 			try:
 				movie['längd'][unit] = times[unit]
 			except KeyError:
 				movie['längd'][unit] = 0
+			except TypeError:
+				print(unit + ": " + movie['längd'])
 
-		movie['slut'] = movie['start'] + 
-			datetime.timedelta(hours=movie['längd']['tim'],
+		# Calculate end time
+		movie['slut'] = movie['start'] + datetime.timedelta(hours=movie['längd']['tim'],
 			minutes=movie['längd']['min'])
 
 		return movie
-
 
 # }}}
 # def __import_movies(self, max_movies) {{{

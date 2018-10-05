@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 #------------------------------------------------------------------------------
 #
 # WHO
@@ -29,7 +29,7 @@ from dcal import CineCal
 def main(args):
 
 	# Get movies from cinemateket
-	cinemateket = Cinemateket(args.limit)
+	cinemateket = Cinemateket(args.number)
 
 	print('Scraped %s movies' % (str(cinemateket.count())))
 	print(79 * '-')
@@ -44,8 +44,9 @@ def main(args):
 	# Insert new events
 	num_events = 0
 	for movie in cinemateket.list():
-		event = cinecal.get(movie['start'])
-#		print(event)
+
+		event = cinecal.get(movie['start'], movie['namn'])
+
 		if event is None:
 			cinecal.insert(movie)
 			num_events = num_events + 1
@@ -60,10 +61,9 @@ if __name__ == '__main__':
 	# Parse arguments
 	parser = argparse.ArgumentParser(description='cine2cal')
 	parser.add_argument('--delete', '-d', type=int, default=7, help='How many days into the past to delete old events')
-	parser.add_argument('--limit', '-l', type=int, default=2, help='Limit how many movies to process')
-	parser.add_argument('--notification', '-n', action='store_true', help='Enable notifications for calendar events')
+	parser.add_argument('--number', '-n', type=int, default=2, help='Number of movies to add')
+	parser.add_argument('--notifications', '-N', action='store_true', help='Enable notifications for calendar events')
 	parser.add_argument('--verbose', '-v', action='store_true', help='Verbose')
-	parser.add_argument('--noauth_local_webserver', action='store_true', help='No local browser')
 	args = parser.parse_args()
 	main(args)
 

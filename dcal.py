@@ -66,7 +66,15 @@ class CineCal():
 		if not credentials or credentials.invalid:
 			flow = client.flow_from_clientsecrets(self.apikeyfile, self.scopes)
 			flow.user_agent = self.name
-			flags = '--noauth_local_webserver'
+
+			# Set flags to no local browser, this will work for most people
+			# TODO: inherit flags from parent
+			import argparse
+			parser = argparse.ArgumentParser(add_help=False)
+			parser.add_argument('--logging_level', default='ERROR')
+			parser.add_argument('--noauth_local_webserver', action='store_true', default=True)
+			flags = parser.parse_args([])
+
 			credentials = tools.run_flow(flow, store, flags)
 			print('Storing credentials to %s' % credential_path)
 

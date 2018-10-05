@@ -21,11 +21,14 @@ You need to install some modules:
 
 ### Windows
 
+pip install --upgrade pip
 pip install --upgrade google-api-python-client requests bs4 httplib2 oauth2client apiclient
 
-### Debian
 
-pip install --upgrade google-api-python-client requests bs4 httplib2 oauth2client apiclient
+### Debian & Ubuntu
+
+apt install python3-googleapi python3-oauth2client python3-bs4 python3-requests python3-oauth2client python3-httplib2
+
 
 ### CentOS 6
 
@@ -38,5 +41,11 @@ pip3 install --upgrade google-api-python-client requests bs4 httplib2 oauth2clie
 
 ## Google API key
 
-https://developers.google.com/gmail/api/quickstart/python
+- Go to https://console.developers.google.com/apis/credentials
+- Create an "OAuth 2.0 client ID"
+- Download the JSON file from the OAuth 2 client ID page and save it as client_secret.json
+- Run the script once to authenticate
+
+More information here: https://developers.google.com/gmail/api/quickstart/python
+
 

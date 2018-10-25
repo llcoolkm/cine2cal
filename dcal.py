@@ -122,7 +122,7 @@ class CineCal():
 			# Cast calendar time to datetime object
 			event['start']['dateTime'] = datetime.datetime.strptime(
 				event['start']['dateTime'],
-				"%Y-%m-%dT%H:%M:00+02:00")
+				"%Y-%m-%dT%H:%M:00%z")
 
 			print("Found event in calendar: %s"
 				% event['start']['dateTime'], event['summary'])

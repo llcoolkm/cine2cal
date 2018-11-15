@@ -22,12 +22,12 @@ You need to install some modules:
 ### Windows
 
 pip install --upgrade pip
-pip install --upgrade google-api-python-client requests bs4 httplib2 oauth2client apiclient
+pip install --upgrade google-api-python-client requests bs4 httplib2 oauth2client apiclient dateutil
 
 
 ### Debian & Ubuntu
 
-apt install python3-googleapi python3-oauth2client python3-bs4 python3-requests python3-oauth2client python3-httplib2
+apt install python3-googleapi python3-oauth2client python3-bs4 python3-requests python3-oauth2client python3-httplib2 python3-dateutil
 
 
 ### CentOS 6
@@ -36,7 +36,7 @@ yum -y install python34 python34-devel python34-setuptools
 cd /usr/lib/python3.4/site-packages/
 python3 easy_install.py pip
 pip3 install --upgrade pip
-pip3 install --upgrade google-api-python-client requests bs4 httplib2 oauth2client apiclient
+pip3 install --upgrade google-api-python-client requests bs4 httplib2 oauth2client apiclient dateutil
 
 
 ## Google API key

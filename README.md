@@ -36,7 +36,7 @@ yum -y install python34 python34-devel python34-setuptools
 cd /usr/lib/python3.4/site-packages/
 python3 easy_install.py pip
 pip3 install --upgrade pip
-pip3 install --upgrade google-api-python-client requests bs4 python-lxml httplib2 oauth2client apiclient dateutil
+pip3 install --upgrade google-api-python-client requests bs4 lxml httplib2 oauth2client apiclient py-dateutil
 
 
 ## Google API key

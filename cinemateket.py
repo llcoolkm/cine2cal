@@ -17,8 +17,7 @@
 #
 # TODO
 #
-#  - Handle a month (or two) of movies instead of the current initial
-#
+#  - ...
 #
 #------------------------------------------------------------------------------
 # imports {{{
@@ -34,7 +33,7 @@ from oauth2client import tools
 
 # }}}
 
-# class Cintemateket() {{{
+# class Cinemateket() {{{
 #------------------------------------------------------------------------------
 class Cinemateket():
 
@@ -66,7 +65,8 @@ class Cinemateket():
 		html = requests.get(self.site + url)
 
 		# soupify and return a soup object
-		return bs(html.text, 'html.parser')
+		# lxml is a more forgiving parser and skips som errors
+		return bs(html.text, 'lxml')
 
 
 # }}}
@@ -78,8 +78,11 @@ class Cinemateket():
 		Returns dictionary
 		"""
 
+		# This div contains the movie information divided in paragraphs
 		div = self.__get_html_page(link).find('div', 'article__editorial-content')
-		div = str(div.find_all('p')[2])
+
+		# Movie facts is in the third paragraph
+		p_facts = str(div.find_all('p')[2])
 
 		# Create a dictionary and prepopulate som values that are not
 		# always there
@@ -87,7 +90,7 @@ class Cinemateket():
 		movie['år'] = '-'
 		movie['format'] = '-'
 
-		for line in div.split("\r\n"):
+		for line in p_facts.split("\r\n"):
 
 			try:
 				line.rstrip('<br>').strip().replace(u'\xa0', ' ')

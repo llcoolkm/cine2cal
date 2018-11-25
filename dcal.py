@@ -18,6 +18,7 @@ from __future__ import print_function
 import os
 import datetime
 import oauth2client
+from dateutil.parser import parse
 from httplib2 import Http
 from apiclient import discovery
 from oauth2client import file, client, tools
@@ -119,10 +120,8 @@ class CineCal():
 		# Loop over retrieved events
 		for event in events.get('items', []):
 
-			# Cast calendar time to datetime object
-			event['start']['dateTime'] = datetime.datetime.strptime(
-				event['start']['dateTime'],
-				"%Y-%m-%dT%H:%M:00%z")
+			# Convert calendar time to datetime object with dateutil
+			event['start']['dateTime'] = parse(event['start']['dateTime'])
 
 			print("Found event in calendar: %s"
 				% event['start']['dateTime'], event['summary'])

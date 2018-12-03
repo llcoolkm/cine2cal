@@ -22,7 +22,7 @@ You need to install some modules:
 ### Windows
 
 pip install --upgrade pip
-pip install --upgrade google-api-python-client requests bs4 lxml httplib2 oauth2client apiclient dateutil
+pip install --upgrade google-api-python-client requests bs4 lxml httplib2 oauth2client apiclient py-dateutil
 
 
 ### Debian & Ubuntu

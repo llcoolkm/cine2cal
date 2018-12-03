@@ -112,7 +112,10 @@ class Cinemateket():
 		# Compute datetime for movie end
 		times = {}
 		
-		# Extract hour and minutes from 'längd'
+		# Extract hour and minutes from 'längd'. If 'längd' does not exist, return None
+		if 'längd' not in movie:
+			return None 	
+
 		for time in re.findall('(\d+) (\w+)', movie['längd']):
 			times[str(time[1])] = int(time[0])
 		try:
@@ -167,10 +170,11 @@ class Cinemateket():
 			# Get the details from the specific movie page
 			movie = self.__get_movie_details(name, link, date, theater)
 
-			num_movies = num_movies + 1
-			self.movies.append(movie)
-			if max_movies != 0 and num_movies >= max_movies:
-				break
+			if not (movie is None):
+				num_movies = num_movies + 1
+				self.movies.append(movie)
+				if max_movies != 0 and num_movies >= max_movies:
+					break
 
 		return None
 

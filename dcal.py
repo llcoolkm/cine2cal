@@ -76,7 +76,7 @@ class CineCal():
 			flags = parser.parse_args([])
 
 			credentials = tools.run_flow(flow, store, flags)
-			print('Storing credentials to %s' % credential_path)
+			print('Storing credentials to', credential_path)
 
 		return credentials
 
@@ -123,8 +123,8 @@ class CineCal():
 			# Convert calendar time to datetime object with dateutil
 			event['start']['dateTime'] = parse(event['start']['dateTime'])
 
-			print("Found event in calendar: %s"
-				% event['start']['dateTime'], event['summary'])
+			print('Found event in calendar: ',
+				event['start']['dateTime'], event['summary'])
 
 			# Set myevent, Break (and return) if this event has
 			# correct tag and the same name
@@ -143,13 +143,11 @@ class CineCal():
 		"""Get events for the past X days
 		"""
 
-		if days == 0:
-			return
-		elif days < 0:
+		if days < 0:
 			# Blast from the past!
 			time_max = datetime.datetime.utcnow()
 			time_min = time_max - datetime.timedelta(days=abs(days))
-		else:
+		elif days > 0:
 			# Return to the future!
 			time_min = datetime.datetime.utcnow()
 			time_max = time_min + datetime.timedelta(days=days)
@@ -157,21 +155,22 @@ class CineCal():
 		page_token = None
 		event_ids = []
 
-		while True:
-			events = self.service.events().list(
+		if days != 0:
+			while True:
+				events = self.service.events().list(
 					calendarId='primary',
 					timeMin=time_min.isoformat() + 'Z',
 					timeMax=time_max.isoformat() + 'Z',
 					pageToken=page_token
 				).execute()
 
-			for event in events['items']:
-				if event['description'].split(':')[0] == self.tag:
-					event_ids.append(event['id'])
+				for event in events['items']:
+					if event['description'].split(':')[0] == self.tag:
+						event_ids.append(event['id'])
 
-			page_token = events.get('nextPageToken')
-			if not page_token:
-				break
+				page_token = events.get('nextPageToken')
+				if not page_token:
+					break
 
 		return event_ids
 
@@ -247,11 +246,12 @@ class CineCal():
 			},
 		}
 
+
 		event = self.service.events().insert(
 			calendarId = 'primary',
 			sendNotifications = False,
 			body = event).execute()
-		print('Event created: %s' % (event.get('htmlLink')))
+		print('Event created: ', event.get('htmlLink'))
 
 		return None
 

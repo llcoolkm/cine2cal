@@ -40,14 +40,15 @@ class Cinemateket():
 # }}}
 # def __init__(self) {{{
 #------------------------------------------------------------------------------
-	def __init__(self, num_movies = 0):
+	def __init__(self, args):
 
 		# Cinemateket
 		self.site = 'http://www.filminstitutet.se'
 		self.index = '/sv/se-och-samtala-om-film/cinemateket-stockholm/program/?eventtype=&listtype=&page=20'
 		self.movies = []
+		self.verbose = args.verbose
 
-		self.__import_movies(num_movies)
+		self.__import_movies(args.number)
 
 		return None
 
@@ -63,6 +64,8 @@ class Cinemateket():
 
 		# HTTP GET content
 		html = requests.get(self.site + url)
+		if self.verbose:
+			print('Fetched', len(html.text), 'bytes from page', self.site + url)
 
 		# soupify and return a soup object
 		# lxml is a more forgiving parser and skips som errors
@@ -81,33 +84,36 @@ class Cinemateket():
 		# This div contains the movie information divided in paragraphs
 		div = self.__get_html_page(link).find('div', 'article__editorial-content')
 
-		# Movie facts is in the third paragraph
-		p_facts = str(div.find_all('p')[2])
+		# Movie facts is in the first p after the first h3 (Filmfakta)
+		# If movies are no longer fetched this has likely changed
+		filmfakta = div.findNext('h3').findNext('p').text
 
-		# Create a dictionary and prepopulate som values that are not
+		# Create a dictionary and prepopulate some values that are not
 		# always there
 		movie = {}
 		movie['år'] = '-'
 		movie['format'] = '-'
 
-		for line in p_facts.split("\r\n"):
-
+		# Populate dictionary and do some text cleanup
+		for line in filmfakta.split("\r\n"):
 			try:
 				line.rstrip('<br>').strip().replace(u'\xa0', ' ')
 				key   = line.split(':')[0].lower()
 				value = line.split(':')[1].rstrip('<br>').strip()
 				movie[key] = value.replace(u'\u2013', '-')
-
 			except (IndexError, ValueError):
 				continue
 
-		# Create dictionary
+		if self.verbose:
+			print('Managed to parse', len(movie), 'facts for this movie')
+
+		# Add movie info we got from the index page
 		movie['namn'] = name.replace(u'\u2013', '-')
 		movie['länk'] = self.site + link
 		movie['start'] = date
 		movie['teater'] = theater
 		# Fix for Windows where a final <br/ is included with the year (!?)
-		movie['år'] = (movie['år'].split('<'))[0]
+		#movie['år'] = (movie['år'].split('<'))[0]
 
 		# Compute datetime for movie end
 		times = {}
@@ -142,8 +148,6 @@ class Cinemateket():
 
 # }}}
 # def __import_movies(self, max_movies) {{{
-#
-#
 #------------------------------------------------------------------------------
 	def __import_movies(self, max_movies):
 		"""Get movies and store in a dictionary. Create a list of dictionaries
@@ -153,6 +157,7 @@ class Cinemateket():
 		"""
 
 		num_movies = 0
+		print('Fetching:', end = '', flush = True)
 
 		# Loop articles and extract key values
 		for article in self.__get_html_page(self.index).find_all('article', 'promoted-item'):
@@ -167,15 +172,22 @@ class Cinemateket():
 				' ' + str(year), '%d/%m kl. %H:%M %Y')
 			theater = article.find_all('span')[1].string
 
+			if self.verbose:
+				print('Found movie', name, 'shown', date, 'at', theater)
+
 			# Get the details from the specific movie page
 			movie = self.__get_movie_details(name, link, date, theater)
 
+			# Add movie to the instance's movie list
 			if not (movie is None):
 				num_movies = num_movies + 1
 				self.movies.append(movie)
+				if not self.verbose:
+					print('.', end = '', flush = True)
 				if max_movies != 0 and num_movies >= max_movies:
 					break
 
+		print()
 		return None
 
 

@@ -29,9 +29,9 @@ from dcal import CineCal
 def main(args):
 
 	# Get movies from cinemateket
-	cinemateket = Cinemateket(args.number)
+	cinemateket = Cinemateket(args)
 
-	print('Scraped %s movies' % (str(cinemateket.count())))
+	print('Scraped', str(cinemateket.count()), 'movies')
 	print(79 * '-')
 	cinemateket.print()
 
@@ -39,7 +39,7 @@ def main(args):
 	cinecal = CineCal()
 
 	# Delete the past
-	print('Deleted %i events' % (cinecal.delete_days(0 - args.delete)))
+	print('Deleted', cinecal.delete_days(0 - args.delete), 'events')
 
 	# Insert new events
 	num_events = 0
@@ -51,7 +51,7 @@ def main(args):
 			cinecal.insert(movie)
 			num_events = num_events + 1
 
-	print('Inserted %i events' % (num_events))
+	print('Inserted', num_events, 'events')
 
 	return
 
@@ -60,8 +60,8 @@ def main(args):
 if __name__ == '__main__':
 	# Parse arguments
 	parser = argparse.ArgumentParser(description='cine2cal')
-	parser.add_argument('--delete', '-d', type=int, default=7, help='How many days into the past to delete old events')
-	parser.add_argument('--number', '-n', type=int, default=2, help='Number of movies to add')
+	parser.add_argument('--delete', '-d', type=int, default=0, help='How many days into the past to delete old events')
+	parser.add_argument('--number', '-n', type=int, default=20, help='Maximum number of movies to add')
 	parser.add_argument('--notifications', '-N', action='store_true', help='Enable notifications for calendar events')
 	parser.add_argument('--verbose', '-v', action='store_true', help='Verbose')
 	args = parser.parse_args()

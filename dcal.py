@@ -1,4 +1,4 @@
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 #
 # WHO
 #
@@ -12,247 +12,292 @@
 #
 #  - Provide methods for manipulating events in a Google calendar
 #
-#------------------------------------------------------------------------------
-# imports {{{
+# ------------------------------------------------------------------------------
+# imports
 from __future__ import print_function
+from __future__ import annotations
 import os
-import datetime
-import oauth2client
+import sys
+import json
+import logging
+from datetime import datetime, timedelta  # Fix: import timedelta separately
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
 from dateutil.parser import parse
-from httplib2 import Http
-from apiclient import discovery
-from oauth2client import file, client, tools
+from dataclasses import dataclass
+from typing import Optional, List, Dict, Any
+from cinemateket import Movie
 
-# }}}
-# class CineCal() {{{
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+
+@dataclass
+class CalendarEvent:
+    """Represents a calendar event with all necessary details"""
+    summary: str
+    location: str
+    description: str
+    start_time: datetime
+    end_time: datetime
+    timezone: str
+    attendees: List[str]
+
+
 class CineCal():
+    """Class for managing Google Calendar events"""
 
-	def __init__(self):
+    def __init__(self,
+                 args: Any,
+                 timezone: str = 'Europe/Stockholm',
+                 attendees: Optional[List[str]] = None,
+                 tag: str = 'CINEMATEKET') -> None:
 
-		self.name = 'dcal'
-		self.scopes = 'https://www.googleapis.com/auth/calendar'
-		self.apikeyfile = 'client_secret.json'
-		self.timezone = 'Europe/Stockholm'
-		self.attendees = ['km@grogg.org']
-		self.tag = 'CINEMATEKET'
+        self.verbose: bool = args.verbose
+        self.credentials_file: str = 'client_secret.json'
+        self.attendees: List[str] = attendees or ['km@grogg.org']
+        self.name: str = 'dcal'
+        self.scopes: str = 'https://www.googleapis.com/auth/calendar'
+        self.tag: str = tag
+        self.timezone: str = timezone
+        self.service: Any = None
+        self._connect_calendar()
 
-		self.__connect_calendar()
+# ------------------------------------------------------------------------------
 
-		return None
+    def _get_credentials(self) -> Credentials:
+        """Gets valid user credentials from storage.
 
+        If nothing has been stored, or if the stored credentials are invalid,
+        the OAuth2 flow is completed to obtain the new credentials.
 
-# }}}
-# def __get_credentials(self) {{{
-#------------------------------------------------------------------------------
-	def __get_credentials(self):
-		"""Gets valid user credentials from storage.
+        Returns:
+            Credentials object
+        """
+        creds = None
+        token_dir = os.path.join(os.path.expanduser('~'), '.credentials')
+        if not os.path.exists(token_dir):
+            os.makedirs(token_dir)
+        token_file = os.path.join(token_dir, 'calendar-token.json')
 
-		If nothing has been stored, or if the stored credentials are invalid,
-		the OAuth2 flow is completed to obtain the new credentials.
+        if os.path.exists(token_file):
+            try:
+                # workaround for
+                # https://github.com/googleapis/google-auth-library-python/issues/501
+                with open(token_file, 'r') as stream:
+                    creds_json = json.load(stream)
+                creds = Credentials.from_authorized_user_info(creds_json)
+                creds.token = creds_json['token']
+                if self.verbose:
+                    print(f'Loaded credentials from {token_file}')
 
-		Returns:
-		Credentials, the obtained credential.
-		"""
-		home_dir = os.path.expanduser('~')
-		credential_dir = os.path.join(home_dir, '.credentials')
-		if not os.path.exists(credential_dir):
-			os.makedirs(credential_dir)
-		credential_path = os.path.join(credential_dir, self.apikeyfile)
+            except Exception as e:
+                sys.stderr.write(f'Failed to load existing credentials: {e}\n')
+                os.remove(token_file)
+                return self._get_credentials()
 
-		store = oauth2client.file.Storage(credential_path)
-		credentials = store.get()
+        # If there are no (valid) credentials available, let the user log in.
+        if not creds or not creds.token:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                if not os.path.exists(self.credentials_file):
+                    raise FileNotFoundError(
+                        f"Missing {self.credentials_file}. Download it from G"
+                        "oogle Cloud Console and place it in the project root."
+                    )
 
-		if not credentials or credentials.invalid:
-			flow = client.flow_from_clientsecrets(self.apikeyfile, self.scopes)
-			flow.user_agent = self.name
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    self.credentials_file, [self.scopes])
+                creds = flow.run_local_server(port=0)
 
-			# Set flags to no local browser, this will work for most people
-			# TODO: inherit flags from parent
-			import argparse
-			parser = argparse.ArgumentParser(add_help=False)
-			parser.add_argument('--logging_level', default='ERROR')
-			parser.add_argument('--noauth_local_webserver', action='store_true', default=True)
-			flags = parser.parse_args([])
+                # Save the credentials for the next run
+                creds_data = {
+                    'token': creds.token,
+                    'refresh_token': creds.refresh_token,
+                    'token_uri': creds.token_uri,
+                    'client_id': creds.client_id,
+                    'client_secret': creds.client_secret,
+                    'scopes': creds.scopes
+                }
 
-			credentials = tools.run_flow(flow, store, flags)
-			print('Storing credentials to', credential_path)
+                with open(token_file, 'w') as token:
+                    json.dump(creds_data, token)
+                    if self.verbose:
+                        print(f'Saved creds to {token_file}')
 
-		return credentials
+        return creds
 
+# ------------------------------------------------------------------------------
 
-# }}}
-# def __connect_calendar(self) {{{
-#------------------------------------------------------------------------------
-	def __connect_calendar(self):
+    def _connect_calendar(self) -> None:
+        """Connect to Google calendar"""
 
-		credentials = self.__get_credentials()
-		http = credentials.authorize(Http())
-		self.service = discovery.build('calendar', 'v3', http=http)
+        if not os.path.exists(self.credentials_file):
+            raise Exception(
+                f'Missing {self.credentials_file} file. Please download it'
+                f'from Google Cloud Console and place it in the project root'
+                f'directory.')
 
-		return None
+        try:
+            credentials = self._get_credentials()
+            self.service = build(
+                'calendar', 'v3',
+                credentials=credentials,
+                cache_discovery=False)
+        except Exception as e:
+            logging.error(f'Failed to connect to calendar: {e}')
 
+# ------------------------------------------------------------------------------
 
-# }}}
-# def get_event() {{{
-#------------------------------------------------------------------------------
-	def get(self, time_event, movie_name):
-		"""Get a single event from the calendar
-		Look for an event that starts at the same date, has the
-		correct tag and the same name.
+    def get(self, time_event: datetime, movie_name: str) -> Optional[Dict[str, Any]]:
+        """Get a single event from the calendar
+        Look for an event that starts at the same date, has the
+        correct tag and the same name."""
 
-		"""
+        try:
+            time_min = time_event.replace(hour=0, minute=0, second=0)
+            time_max = time_event.replace(hour=23, minute=59, second=59)
 
-		myevent = None
+            events = self.service.events().list(
+                calendarId='primary',
+                timeMin=time_min.isoformat() + 'Z',
+                timeMax=time_max.isoformat() + 'Z',
+                singleEvents=True,
+                orderBy='startTime').execute()
+        except Exception as e:
+            sys.stderr.write(f'Failed to fetch events: {e}\n')
+            return None
 
-		# Set time to match the entire day
-		time_min = time_event.replace(hour = 0, minute = 0, second = 0)
-		time_max = time_event.replace(hour = 23, minute = 59, second = 59)
+        # Loop over retrieved events
+        for event in events.get('items', []):
 
-		# Retrieve all events
-		events = self.service.events().list(
-			calendarId = 'primary',
-			timeMin = time_min.isoformat() + 'Z',
-			timeMax = time_max.isoformat() + 'Z',
-			singleEvents = True,
-			orderBy = 'startTime').execute()
+            # Convert calendar time to datetime object with dateutil
+            event['start']['dateTime'] = parse(event['start']['dateTime'])
 
-		# Loop over retrieved events
-		for event in events.get('items', []):
+            # Set myevent, Break (and return) if this event has
+            # correct tag and the same name
+            if (event['description'].split(':')[0] == self.tag and
+                    movie_name in event['summary']):
+                if self.verbose:
+                    print(f"Found event in calendar: "
+                          f"{event['start']['dateTime']} "
+                          f"{event['summary']}")
+                return event
 
-			# Convert calendar time to datetime object with dateutil
-			event['start']['dateTime'] = parse(event['start']['dateTime'])
+        return None
 
-			print('Found event in calendar: ',
-				event['start']['dateTime'], event['summary'])
+# ------------------------------------------------------------------------------
 
-			# Set myevent, Break (and return) if this event has
-			# correct tag and the same name
-			if event['description'].split(':')[0] == self.tag:
-				if event['summary'] == movie_name:
-					myevent=event
-					break
+    def list(self, days: int) -> List[str]:
+        """Get events for the past X days"""
 
-		return myevent
+        # Blast from the past!
+        if days < 0:
+            time_max = datetime.utcnow()
+            time_min = time_max - timedelta(days=abs(days))
+        # Return to the future!
+        elif days > 0:
+            time_min = datetime.utcnow()
+            time_max = time_min + timedelta(days=days)
+        else:
+            return []
 
+        page_token = None
+        event_ids: List[str] = []
 
-# }}}
-# def list(self, days) {{{
-#------------------------------------------------------------------------------
-	def list(self, days):
-		"""Get events for the past X days
-		"""
+        while True:
+            events = self.service.events().list(
+                calendarId='primary',
+                timeMin=time_min.isoformat() + 'Z',
+                timeMax=time_max.isoformat() + 'Z',
+                pageToken=page_token
+            ).execute()
 
-		if days < 0:
-			# Blast from the past!
-			time_max = datetime.datetime.utcnow()
-			time_min = time_max - datetime.timedelta(days=abs(days))
-		elif days > 0:
-			# Return to the future!
-			time_min = datetime.datetime.utcnow()
-			time_max = time_min + datetime.timedelta(days=days)
+            for event in events['items']:
+                if event['description'].split(':')[0] == self.tag:
+                    event_ids.append(event['id'])
 
-		page_token = None
-		event_ids = []
+            page_token = events.get('nextPageToken')
+            if not page_token:
+                break
 
-		if days != 0:
-			while True:
-				events = self.service.events().list(
-					calendarId='primary',
-					timeMin=time_min.isoformat() + 'Z',
-					timeMax=time_max.isoformat() + 'Z',
-					pageToken=page_token
-				).execute()
+        return event_ids
 
-				for event in events['items']:
-					if event['description'].split(':')[0] == self.tag:
-						event_ids.append(event['id'])
+# ------------------------------------------------------------------------------
 
-				page_token = events.get('nextPageToken')
-				if not page_token:
-					break
+    def delete(self, event_id: str) -> None:
+        """Delete a single event"""
 
-		return event_ids
+        self.service.events().delete(calendarId='primary',
+                                     eventId=event_id).execute()
 
+# ------------------------------------------------------------------------------
 
-# }}}
-# def delete(self, event_id) {{{
-#------------------------------------------------------------------------------
-	def delete(self, event_id):
-		"""Delete a single event
+    def delete_days(self, days: int = -1) -> int:
+        """Delete events from the current day, use negative days for past
+        events.
 
-		Returns None
-		"""
+        Default:
+            days is 1 day back in time.
 
-		self.service.events().delete(calendarId='primary',
-			eventId=event_id).execute()
+        Returns:
+            number of deleted events.
+        """
 
-		return None
+        num_events = 0
+        for event_id in self.list(days):
+            self.delete(event_id)
+            num_events += 1
 
-# }}}
-# def delete_days(self, days=-1) {{{
-#------------------------------------------------------------------------------
-	def delete_days(self, days = -1):
-		"""Delete events from the current day, use negative days for past
-		events.
+        return num_events
 
-		Default is 1 day backwards.
+# ------------------------------------------------------------------------------
 
-		Returns number of deleted events.
-		"""
+    def insert(self, movie: Movie) -> None:
+        """Create a single event in the calendar.
 
-		num_events = 0
-		for event_id in self.list(days):
-			self.delete(event_id)
-			num_events = num_events + 1
+        Args:
+            movie: MovieEvent object containing event details
 
-		return num_events
+        Raises:
+            Exception: If event creation fails
+        """
 
+        event = self._build_event(movie)
+        try:
+            created_event = self.service.events().insert(
+                calendarId='primary',
+                sendNotifications=False,
+                body=event).execute()
+            print(f'Event created: {created_event.get("htmlLink")}')
+        except Exception as e:
+            sys.stderr.write(f'Failed to create event: {e}')
 
-# }}}
-# def insert_event(self, movie) {{{
-#------------------------------------------------------------------------------
-	def insert(self, movie):
-		"""Create a single event in the calendar. Takes a movie dictionary as
-		input.
+# ------------------------------------------------------------------------------
 
-		returns None
-		"""
+    def _build_event(self, movie: Movie) -> Dict[str, Any]:
+        """Builds event dictionary from movie data."""
 
-		event = {
-			'summary': movie['namn'],
-			'location': movie['teater'],
-			'description': "%s:\n%s\n%s\n%s\n"
-				% (self.tag, movie['år'],
-				movie['format'],
-				movie['länk']),
-			'start': {
-				'dateTime': movie['start'].strftime('%Y-%m-%dT%H:%M:00'),
-				'timeZone': self.timezone
-			},
-			'end': {
-				'dateTime': movie['slut'].strftime('%Y-%m-%dT%H:%M:00'),
-				'timeZone': self.timezone
-			},
-			'attendees': [
-				{'email': self.attendees }
-			],
-			'reminders': {
-				'useDefault': False,
-				'overrides': [
-					{'method': 'email', 'minutes': 24 * 60},
-					{'method': 'popup', 'minutes': 60},
-				],
-			},
-		}
-
-
-		event = self.service.events().insert(
-			calendarId = 'primary',
-			sendNotifications = False,
-			body = event).execute()
-		print('Event created: ', event.get('htmlLink'))
-
-		return None
-
-# }}}
+        return {
+            'summary': movie.name,
+            'location': movie.theater,
+            'description': f"{self.tag}:\n{movie.year}\n{movie.link}",
+            'start': {
+                'dateTime': movie.start.isoformat(),
+                'timeZone': self.timezone
+            },
+            'end': {
+                'dateTime': movie.end.isoformat(),
+                'timeZone': self.timezone
+            },
+            'attendees': [{'email': email} for email in self.attendees],
+            'reminders': {
+                'useDefault': False,
+                'overrides': [
+                    {'method': 'email', 'minutes': 24 * 60},
+                    {'method': 'popup', 'minutes': 60},
+                ],
+            },
+        }

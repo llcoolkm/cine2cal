@@ -1,18 +1,3 @@
-# ------------------------------------------------------------------------------
-#
-# WHO
-#
-#  km@grogg.org
-#
-# WHEN
-#
-#  2016-02-15 Initial script
-#
-# WHAT
-#
-#  - Provide methods for manipulating events in a Google calendar
-#
-# ------------------------------------------------------------------------------
 # imports
 from __future__ import print_function
 from __future__ import annotations
@@ -151,7 +136,8 @@ class CineCal():
 
 # ------------------------------------------------------------------------------
 
-    def get(self, time_event: datetime, movie_name: str) -> Optional[Dict[str, Any]]:
+    def get(self, time_event: datetime,
+            movie_name: str) -> Optional[Dict[str, Any]]:
         """Get a single event from the calendar
         Look for an event that starts at the same date, has the
         correct tag and the same name."""
@@ -283,7 +269,7 @@ class CineCal():
         return {
             'summary': movie.name,
             'location': movie.theater,
-            'description': f"{self.tag}:\n{movie.year}\n{movie.link}",
+            'description': f'{self.tag}:\n{movie.year}\n{movie.link}',
             'start': {
                 'dateTime': movie.start.isoformat(),
                 'timeZone': self.timezone

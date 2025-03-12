@@ -1,25 +1,3 @@
-# ------------------------------------------------------------------------------
-#
-# WHO
-#
-#  km@grogg.org
-#
-# WHEN
-#
-#  2016-02-09 Initial script
-#  2016-02-10 Added Google calendar function
-#  2016-02-15 Remade script into a class/module
-#
-# WHAT
-#
-#  - Scrape cinemateket for movies
-#  - Parse each movie page for detailed information
-#
-# TODO
-#
-#  - ...
-#
-# ------------------------------------------------------------------------------
 # imports
 import re
 import requests
@@ -82,12 +60,14 @@ class Cinemateket():
 
 # ------------------------------------------------------------------------------
 
-    def _get_movie_details(self, name: str, link: str,
-                           date: datetime.datetime, theater: str) -> Optional[Movie]:
+    def _get_movie_details(self,
+                           name: str,
+                           link: str,
+                           date: datetime.datetime,
+                           theater: str) -> Optional[Movie]:
         """Get and parse movie details.
-
         Return:
-            dictionary
+            None or dictionary
         """
 
         name = name.replace(u'\u2013', '-')
@@ -110,8 +90,8 @@ class Cinemateket():
                     print(filmfakta)
 
                 # Extract year
-                m = re.search(r'(\d{4})', filmfakta)
-                year = str(m.group(1)) if m else '-'
+                y_match = re.search(r'(\d{4})', filmfakta)
+                year = str(y_match.group(1)) if y_match else '-'
 
                 # Extract hours & minutes
                 h_match = re.search(r'(\d+) tim', filmfakta)

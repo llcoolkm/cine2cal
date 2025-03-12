@@ -18,6 +18,7 @@
 #
 #
 # ------------------------------------------------------------------------------
+
 # Imports
 import sys
 import argparse
@@ -27,7 +28,7 @@ from dcal import CineCal
 # ------------------------------------------------------------------------------
 
 
-def main(args):
+def main(args) -> None:
     """Main function to sync Cinemateket movies to calendar"""
 
     try:
@@ -52,12 +53,12 @@ def main(args):
 
     except Exception as e:
         sys.stderr.write(f'Error occurred: {e}\n')
-        return 1
+        sys.exit(-1)
 
-    return 0
+# ------------------------------------------------------------------------------
 
 
-def _sync_events(cinemateket, cinecal):
+def _sync_events(cinemateket, cinecal) -> int:
     """Sync movies to calendar and return number of inserted events"""
     num_events = 0
     for movie in cinemateket.list():
@@ -69,8 +70,7 @@ def _sync_events(cinemateket, cinecal):
                 cinecal.insert(movie)
                 num_events += 1
         except Exception as e:
-            sys.stderr.write(f"Failed to sync movie {
-                             movie['name']}: {e}\n")
+            sys.stderr.write(f'Failed to sync movie {movie.name}: {e}\n')
 
     return num_events
 

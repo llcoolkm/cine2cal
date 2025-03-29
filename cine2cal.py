@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#!/usr/bin/env python3
 # ------------------------------------------------------------------------------
 #
 # WHO
@@ -19,23 +19,23 @@
 #
 # ------------------------------------------------------------------------------
 
-# Imports
-import sys
 import argparse
+import sys
+
+from halo import Halo
+
 from cinemateket import Cinemateket
 from dcal import CineCal
 
+
 # ------------------------------------------------------------------------------
 
-
-def main(args) -> None:
+def main(args: argparse.Namespace) -> None:
     """Main function to sync Cinemateket movies to calendar"""
 
     try:
-
         # Get movies from cinemateket
         cinemateket = Cinemateket(args)
-        print(f'Scraped {str(cinemateket.count())} movies.')
         print()
         cinemateket.print()
         print()
@@ -48,17 +48,22 @@ def main(args) -> None:
         print(f'Deleted {deleted_count} events.')
 
         # Insert new events
+        if args.dry_run:
+            return
+
         num_events = _sync_events(cinemateket, cinecal)
         print(f'Inserted {num_events} events.')
 
     except Exception as e:
+        #        spinner.stop_and_persist(
+        #            text=f'Scraped {str(cinemateket.count())} movies.')
         sys.stderr.write(f'Error occurred: {e}\n')
         sys.exit(-1)
 
 # ------------------------------------------------------------------------------
 
 
-def _sync_events(cinemateket, cinecal) -> int:
+def _sync_events(cinemateket: Cinemateket, cinecal: CineCal) -> int:
     """Sync movies to calendar and return number of inserted events"""
     num_events = 0
     for movie in cinemateket.list():
@@ -83,11 +88,13 @@ if __name__ == '__main__':
     # Parse arguments
     parser = argparse.ArgumentParser(description='cine2cal')
     parser.add_argument('--delete', '-d', type=int, default=0,
-                        help='How many days in the past to delete old events')
-    parser.add_argument('--number', '-n', type=int, default=20,
-                        help='Maximum number of movies to add')
+                        help='How many days in the past to delete old events.')
+    parser.add_argument('--dry-run', '-n', action='store_true',
+                        help='Don\'t insert events into the calendar.')
+    parser.add_argument('--movies', '-m', type=int, default=20,
+                        help='Number of movies to scrape.')
     parser.add_argument('--notifications', '-N', action='store_true',
-                        help='Enable notifications for calendar events')
+                        help='Enable notifications for calendar events.')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose')
     args = parser.parse_args()
     main(args)

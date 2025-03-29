@@ -13,9 +13,10 @@
 #  - Use this to register credentials the first time you connect
 #
 # ------------------------------------------------------------------------------
-# Imports
+
 import argparse
 import datetime
+
 from dcal import CineCal
 
 # ------------------------------------------------------------------------------
@@ -30,10 +31,10 @@ def main(args):
     eventtime = [int(x) for x in args.date.split('-')]
     eventtime = eventtime + [int(x) for x in args.time.split(':')]
     eventtime = datetime.datetime(*eventtime)
-    print("DATETIME: %s\n" % eventtime)
+    print('DATETIME: {eventtime}\n')
 
     # Get event
-    event = cinecal.get(eventtime, "")
+    event = cinecal.get(eventtime, '')
     print(event)
 
     return

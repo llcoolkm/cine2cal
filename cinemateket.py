@@ -1,14 +1,16 @@
-# imports
+# -----------------------------------------------------------------------------
+
 import re
-import requests
 import datetime
-from bs4 import BeautifulSoup as bs
 from dataclasses import dataclass
-from typing import Optional, List, Any
+
+from bs4 import BeautifulSoup as bs
+from halo import Halo
+import requests
 from tabulate import tabulate
 
-# ------------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
 
 @dataclass
 class MovieLength:
@@ -29,30 +31,26 @@ class Movie:
 
 class Cinemateket():
 
-    def __init__(self, args: Any) -> None:
+    def __init__(self, args) -> None:
 
-        self.site = "http://www.filminstitutet.se"
-        self.index = "/sv/se-och-samtala-om-film/cinemateket-stockholm/" \
-                     "program/?eventtype=&listtype=&page=20"
-        self.movies: List[Movie] = []
+        self.site = 'http://www.filminstitutet.se'
+        self.index = '/sv/se-och-samtala-om-film/cinemateket-stockholm/' \
+                     'program/?eventtype=&listtype=&page=20'
+        self.movies: list[Movie] = []
         self.verbose: bool = args.verbose
 
-        self._import_movies(args.number)
+        self._import_movies(args.movies)
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
     def _get_html_page(self, url: str) -> bs:
-        """Get page from URL and return as a soup object.
-
-        Return:
-            bs
-        """
+        """Request the URL page and return it as a soup object."""
 
         # HTTP GET content
         html = requests.get(self.site + url)
         if self.verbose:
-            print(f'Fetched {len(html.text)} bytes from page'
-                  f' {self.site} {url}')
+            print(f'Fetched {len(html.text)} bytes from page '
+                  f'{self.site} {url}')
 
         # soupify and return a soup object
         # lxml is a more forgiving parser and skips som errors
@@ -64,25 +62,23 @@ class Cinemateket():
                            name: str,
                            link: str,
                            date: datetime.datetime,
-                           theater: str) -> Optional[Movie]:
-        """Get and parse movie details.
-        Return:
-            None or dictionary
-        """
+                           theater: str) -> Movie | None:
+        """Get and parse movie details."""
 
         name = name.replace(u'\u2013', '-')
         year = '-'
         length = MovieLength(hours=0, minutes=0)
-        marker = "isningsmaterial"
+        marker = 'isningsmaterial'
 
         # This div contains the movie information divided in paragraphs
         div = self._get_html_page(link).find(
             'div', 'article__editorial-content')
-        if not div:
+        if not div or not hasattr(div, 'find_all'):
             return None
 
         # Extract year, start and end of movie
-        paragraphs = div.find_all('p')
+        paragraphs = div.find_all('p')  # type: ignore
+
         for p in paragraphs:
             if marker in p.get_text():
                 filmfakta = p.get_text()
@@ -111,7 +107,7 @@ class Cinemateket():
         return Movie(name=name, link=self.site + link, start=date, end=end,
                      theater=theater, year=year, length=length)
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
     def _import_movies(self, max_movies: int) -> int:
         """Get movies and store in a dictionary. Create a list of dictionaries
@@ -119,12 +115,14 @@ class Cinemateket():
         """
 
         num_movies = 0
-        print('Fetching:', end='', flush=True)
+        # print('Fetching:', end='', flush=True)
+        spinner = Halo(text='Fetching movies', spinner='dots')
+        spinner.start()
 
         # Loop articles and extract key values
         articles = self._get_html_page(
             self.index).find_all('article', 'promoted-item')
-        for article in articles:
+        for article in articles[:max_movies]:
             try:
                 name = article.h3.string
                 if not name:
@@ -147,37 +145,36 @@ class Cinemateket():
                 if movie:
                     num_movies += 1
                     self.movies.append(movie)
-                    if not self.verbose:
-                        print('.', end='', flush=True)
-                    if max_movies != 0 and num_movies >= max_movies:
-                        break
 
             except AttributeError:
                 continue
 
+        spinner.stop_and_persist(symbol=u'\N{check mark}',
+                                 text=f'Fetched {max_movies} movies.')
         return num_movies
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
     def count(self) -> int:
         return len(self.movies)
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
-    def list(self) -> List[Movie]:
+    def list(self) -> list[Movie]:
         return self.movies
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
     def pop(self) -> Movie:
         return self.movies.pop()
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
     def print(self) -> None:
         """Print all movies in a formatted table"""
         table_data = [
             [
-                f"{movie.start.strftime('%Y-%m-%d %H:%M')}",
+                f'{movie.start.strftime('%Y-%m-%d %H:%M')}',
                 movie.name,
                 movie.year,
                 movie.theater,

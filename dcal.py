@@ -1,18 +1,19 @@
-# imports
+# -----------------------------------------------------------------------------
+
 from __future__ import print_function
 from __future__ import annotations
+from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+import json
 import os
 import sys
-import json
-import logging
-from datetime import datetime, timedelta  # Fix: import timedelta separately
+
+from dateutil.parser import parse
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from dateutil.parser import parse
-from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
+
 from cinemateket import Movie
 
 # ------------------------------------------------------------------------------
@@ -27,26 +28,26 @@ class CalendarEvent:
     start_time: datetime
     end_time: datetime
     timezone: str
-    attendees: List[str]
+    attendees: list[str]
 
 
 class CineCal():
     """Class for managing Google Calendar events"""
 
     def __init__(self,
-                 args: Any,
+                 args,
                  timezone: str = 'Europe/Stockholm',
-                 attendees: Optional[List[str]] = None,
+                 attendees=None,
                  tag: str = 'CINEMATEKET') -> None:
 
         self.verbose: bool = args.verbose
         self.credentials_file: str = 'client_secret.json'
-        self.attendees: List[str] = attendees or ['km@grogg.org']
+        self.attendees: list[str] = attendees or ['km@grogg.org']
         self.name: str = 'dcal'
         self.scopes: str = 'https://www.googleapis.com/auth/calendar'
         self.tag: str = tag
         self.timezone: str = timezone
-        self.service: Any = None
+        self.service: object = None
         self._connect_calendar()
 
 # ------------------------------------------------------------------------------
@@ -89,8 +90,8 @@ class CineCal():
             else:
                 if not os.path.exists(self.credentials_file):
                     raise FileNotFoundError(
-                        f"Missing {self.credentials_file}. Download it from G"
-                        "oogle Cloud Console and place it in the project root."
+                        f'Missing {self.credentials_file}. Download it from '
+                        'Google Cloud Console and place in the project root.'
                     )
 
                 flow = InstalledAppFlow.from_client_secrets_file(
@@ -121,9 +122,9 @@ class CineCal():
 
         if not os.path.exists(self.credentials_file):
             raise Exception(
-                f'Missing {self.credentials_file} file. Please download it'
-                f'from Google Cloud Console and place it in the project root'
-                f'directory.')
+                f'Missing {self.credentials_file} file. Please download it '
+                'from Google Cloud Console and place it in the project root '
+                'directory.')
 
         try:
             credentials = self._get_credentials()
@@ -132,12 +133,12 @@ class CineCal():
                 credentials=credentials,
                 cache_discovery=False)
         except Exception as e:
-            logging.error(f'Failed to connect to calendar: {e}')
+            sys.stderr.write(f'Failed to connect to calendar: {e}\n')
 
 # ------------------------------------------------------------------------------
 
     def get(self, time_event: datetime,
-            movie_name: str) -> Optional[Dict[str, Any]]:
+            movie_name: str) -> dict[str, str | int] | None:
         """Get a single event from the calendar
         Look for an event that starts at the same date, has the
         correct tag and the same name."""
@@ -146,7 +147,7 @@ class CineCal():
             time_min = time_event.replace(hour=0, minute=0, second=0)
             time_max = time_event.replace(hour=23, minute=59, second=59)
 
-            events = self.service.events().list(
+            events = self.service.events().list(  # type: ignore
                 calendarId='primary',
                 timeMin=time_min.isoformat() + 'Z',
                 timeMax=time_max.isoformat() + 'Z',
@@ -167,34 +168,34 @@ class CineCal():
             if (event['description'].split(':')[0] == self.tag and
                     movie_name in event['summary']):
                 if self.verbose:
-                    print(f"Found event in calendar: "
-                          f"{event['start']['dateTime']} "
-                          f"{event['summary']}")
+                    print(f'Found event in calendar: '
+                          f'{event['start']['dateTime']} '
+                          f'{event['summary']}')
                 return event
 
         return None
 
 # ------------------------------------------------------------------------------
 
-    def list(self, days: int) -> List[str]:
+    def list(self, days: int) -> list[str]:
         """Get events for the past X days"""
 
         # Blast from the past!
         if days < 0:
-            time_max = datetime.utcnow()
+            time_max = datetime.now(timezone.utc)
             time_min = time_max - timedelta(days=abs(days))
         # Return to the future!
         elif days > 0:
-            time_min = datetime.utcnow()
+            time_min = datetime.now(timezone.utc)
             time_max = time_min + timedelta(days=days)
         else:
             return []
 
         page_token = None
-        event_ids: List[str] = []
+        event_ids: list[str] = []
 
         while True:
-            events = self.service.events().list(
+            events = self.service.events().list(  # type: ignore
                 calendarId='primary',
                 timeMin=time_min.isoformat() + 'Z',
                 timeMax=time_max.isoformat() + 'Z',
@@ -216,7 +217,7 @@ class CineCal():
     def delete(self, event_id: str) -> None:
         """Delete a single event"""
 
-        self.service.events().delete(calendarId='primary',
+        self.service.events().delete(calendarId='primary',  # type: ignore
                                      eventId=event_id).execute()
 
 # ------------------------------------------------------------------------------
@@ -253,17 +254,17 @@ class CineCal():
 
         event = self._build_event(movie)
         try:
-            created_event = self.service.events().insert(
+            created_event = self.service.events().insert(  # type: ignore
                 calendarId='primary',
                 sendNotifications=False,
                 body=event).execute()
-            print(f'Event created: {created_event.get("htmlLink")}')
+            print(f'Event created: {created_event.get('htmlLink')}')
         except Exception as e:
             sys.stderr.write(f'Failed to create event: {e}')
 
 # ------------------------------------------------------------------------------
 
-    def _build_event(self, movie: Movie) -> Dict[str, Any]:
+    def _build_event(self, movie: Movie) -> dict:
         """Builds event dictionary from movie data."""
 
         return {

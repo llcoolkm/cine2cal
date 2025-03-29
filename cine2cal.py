@@ -22,8 +22,6 @@
 import argparse
 import sys
 
-from halo import Halo
-
 from cinemateket import Cinemateket
 from dcal import CineCal
 
@@ -55,8 +53,6 @@ def main(args: argparse.Namespace) -> None:
         print(f'Inserted {num_events} events.')
 
     except Exception as e:
-        #        spinner.stop_and_persist(
-        #            text=f'Scraped {str(cinemateket.count())} movies.')
         sys.stderr.write(f'Error occurred: {e}\n')
         sys.exit(-1)
 

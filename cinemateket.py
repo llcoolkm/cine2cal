@@ -1,8 +1,11 @@
 # -----------------------------------------------------------------------------
 
-import re
+import concurrent.futures
 import datetime
 from dataclasses import dataclass
+import re
+from threading import Lock
+
 
 from bs4 import BeautifulSoup as bs
 from halo import Halo
@@ -114,19 +117,25 @@ class Cinemateket():
         and store in object.
         """
 
-        num_movies = 0
-        # print('Fetching:', end='', flush=True)
-        spinner = Halo(text='Fetching movies', spinner='dots')
+        # A spinner to indicate progress
+        spinner = Halo(text='Fetching movies.', spinner='moon')
         spinner.start()
 
-        # Loop articles and extract key values
+        # Thread-safe lock for adding movies
+        movies_lock = Lock()
+
+        # Loop articles and extract key values, up to max_movies
         articles = self._get_html_page(
-            self.index).find_all('article', 'promoted-item')
-        for article in articles[:max_movies]:
+            self.index).find_all('article', 'promoted-item')[:max_movies]
+
+        if self.verbose:
+            print(f'Found {len(articles)} movies to process')
+
+        def process_article(article):
             try:
                 name = article.h3.string
                 if not name:
-                    continue
+                    return None
 
                 link = article.a['href']
                 year = (datetime.datetime.now()).year
@@ -143,15 +152,28 @@ class Cinemateket():
 
                 # Add movie to the instance's movie list
                 if movie:
-                    num_movies += 1
-                    self.movies.append(movie)
+                    with movies_lock:
+                        self.movies.append(movie)
+                    if self.verbose:
+                        print(f'Added movie {name} to list')
+                    return movie
 
-            except AttributeError:
-                continue
+            except AttributeError as e:
+                if self.verbose:
+                    print(f'Error processing movie: {e}')
+                return None
+
+        # Use ThreadPoolExecutor to fetch movies in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [executor.submit(process_article, article)
+                       for article in articles]
+
+            # Wait for all futures to complete
+            concurrent.futures.wait(futures)
 
         spinner.stop_and_persist(symbol=u'\N{check mark}',
-                                 text=f'Fetched {max_movies} movies.')
-        return num_movies
+                                 text=f'Fetched {len(self.movies)} movies.')
+        return len(self.movies)
 
 # -----------------------------------------------------------------------------
 
